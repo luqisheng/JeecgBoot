@@ -716,8 +716,8 @@ public class AIChatHandler implements IAIChatHandler {
                 return new JeecgBootException(errMsg);
             }
 
-            // 2.根据常见异常关键字做细致翻译（大小写不敏感）
-            errMsg = matchErrorMsg(exceptionMsg, errMsg);
+            // 2.统一走错误文案翻译器（关键字映射 + JSON解析 + 超时兜底），未命中时保留调用方默认文案
+            errMsg = LlmErrorMessageTranslator.translateMessage(exceptionMsg, defaultMsg);
         }
 
         log.error("AI模型调用异常: {}", errMsg, e);
