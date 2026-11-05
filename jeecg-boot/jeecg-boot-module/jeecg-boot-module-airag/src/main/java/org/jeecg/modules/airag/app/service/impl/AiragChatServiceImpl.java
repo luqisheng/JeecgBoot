@@ -60,7 +60,7 @@ import org.jeecg.modules.airag.llm.document.TikaDocumentParser;
 import org.jeecg.modules.airag.llm.entity.AiragKnowledgeDoc;
 import org.jeecg.modules.airag.llm.entity.AiragModel;
 import org.jeecg.modules.airag.flow.handler.BraveSearchToolBuilder;
-import org.jeecg.modules.airag.llm.handler.AIChatHandler;
+import org.jeecg.modules.airag.llm.handler.LlmErrorMessageTranslator;
 import org.jeecg.modules.airag.llm.handler.JeecgToolsProvider;
 import org.jeecg.modules.airag.llm.mapper.AiragModelMapper;
 import org.jeecg.modules.airag.llm.service.IAiragFlowPluginService;
@@ -145,6 +145,12 @@ public class AiragChatServiceImpl implements IAiragChatService {
      * 重新接收消息
      */
     private static final ExecutorService SSE_THREAD_POOL = Executors.newFixedThreadPool(10); // 最大10个线程
+
+    /**
+     * SSE 硬超时（60 分钟）：最后一道兜底网。
+     * 到点由容器触发 onTimeout，清理缓存并给客户端发一条 ERROR。
+     */
+    private static final long SSE_MAX_DURATION_MS = 60 * 60 * 1000L;
 
     @Override
     public SseEmitter send(ChatSendParams chatSendParams) {
@@ -259,30 +265,50 @@ public class AiragChatServiceImpl implements IAiragChatService {
      * @date 2025/2/27 15:56
      */
     private static void closeSSE(SseEmitter emitter, EventData eventData) {
-        AssertUtils.assertNotEmpty("请求id不能为空", eventData);
-        if (null == emitter) {
-            log.warn("会话已关闭");
-            return;
-        }
+        String requestId = (null != eventData) ? eventData.getRequestId() : null;
         try {
-            // 发送完成事件
-            emitter.send(SseEmitter.event().data(eventData));
-        } catch (Exception e) {
-            if(!e.getMessage().contains("ResponseBodyEmitter has already completed")){
-                log.error("终止会话时发生错误", e);
+            if (null == emitter) {
+                log.warn("会话已关闭,requestId:{}", requestId);
+                return;
             }
             try {
-                // 防止异常冒泡
-                emitter.completeWithError(e);
-            } catch (Exception ignore) {}
+                // 发送完成事件
+                if (null != eventData) {
+                    emitter.send(SseEmitter.event().data(eventData));
+                }
+            } catch (Exception e) {
+                String message = e.getMessage();
+                if (message == null || !message.contains("ResponseBodyEmitter has already completed")) {
+                    log.error("终止会话时发生错误", e);
+                }
+                try {
+                    // 防止异常冒泡
+                    emitter.completeWithError(e);
+                } catch (Exception ignore) {}
+            }
         } finally {
-            // 从缓存中移除emitter
-            AiragLocalCache.remove(AiragConsts.CACHE_TYPE_SSE, eventData.getRequestId());
-            // 关闭emitter
+            // 无论成功失败,统一清理三个缓存键并关闭emitter
+            cleanupSseCache(requestId);
             try {
-                emitter.complete();
+                if (null != emitter) {
+                    emitter.complete();
+                }
             } catch (Exception ignore) {}
         }
+    }
+
+    /**
+     * 清理一个会话相关的三个SSE缓存键（幂等，requestId为空时直接跳过）。
+     *
+     * @param requestId 会话请求id
+     */
+    private static void cleanupSseCache(String requestId) {
+        if (oConvertUtils.isEmpty(requestId)) {
+            return;
+        }
+        AiragLocalCache.remove(AiragConsts.CACHE_TYPE_SSE, requestId);
+        AiragLocalCache.remove(AiragConsts.CACHE_TYPE_SSE_SEND_TIME, requestId);
+        AiragLocalCache.remove(AiragConsts.CACHE_TYPE_SSE_HISTORY_MSG, requestId);
     }
 
     @Override
@@ -672,16 +698,45 @@ public class AiragChatServiceImpl implements IAiragChatService {
      * @date 2025/8/12 15:30
      */
     private static SseEmitter createSSE(String requestId) {
-        SseEmitter emitter = new SseEmitter(-0L);
+        // 60分钟硬上限：到点由容器触发onTimeout，兜底清理并给客户端发送ERROR
+        SseEmitter emitter = new SseEmitter(SSE_MAX_DURATION_MS);
         emitter.onError(throwable -> {
             log.warn("SEE向客户端发送消息失败: {}", throwable.getMessage());
-            AiragLocalCache.remove(AiragConsts.CACHE_TYPE_SSE, requestId);
-            AiragLocalCache.remove(AiragConsts.CACHE_TYPE_SSE_SEND_TIME, requestId);
+            cleanupOwnSseCache(emitter, requestId);
+            try {
+                emitter.complete();
+            } catch (Exception ignore) {}
+        });
+        emitter.onCompletion(() -> {
+            log.info("[AI-CHAT]SSE会话正常结束,requestId:{}", requestId);
+            cleanupOwnSseCache(emitter, requestId);
+        });
+        emitter.onTimeout(() -> {
+            log.warn("[AI-CHAT]SSE会话超时已强制结束,requestId:{}", requestId);
+            try {
+                EventData eventData = new EventData(requestId, null, EventData.EVENT_FLOW_ERROR);
+                eventData.setData(EventFlowData.builder().success(false).message("本次会话超时已结束，请重新发起对话。").build());
+                emitter.send(SseEmitter.event().data(eventData));
+            } catch (Exception e) {
+                log.warn("[AI-CHAT]SSE超时通知发送失败,requestId:{}", requestId);
+            }
+            cleanupOwnSseCache(emitter, requestId);
             try {
                 emitter.complete();
             } catch (Exception ignore) {}
         });
         return emitter;
+    }
+
+    /**
+     * 仅当缓存中登记的SSE还是当前emitter时才清理。
+     * 避免"继续接收"(receiveByRequestId)这类旁路emitter结束时误删主会话的缓存。
+     */
+    private static void cleanupOwnSseCache(SseEmitter emitter, String requestId) {
+        if (emitter == null || emitter != AiragLocalCache.get(AiragConsts.CACHE_TYPE_SSE, requestId)) {
+            return;
+        }
+        cleanupSseCache(requestId);
     }
 
     @Override
@@ -1789,32 +1844,16 @@ public class AiragChatServiceImpl implements IAiragChatService {
                 return;
             }
             log.error(error.getMessage(), error);
-            String errMsg = error.getMessage();
-            if (errMsg != null && errMsg.contains("timeout")) {
-                //update-begin---author:chenrui ---date:20250425  for：[QQYUN-12203]AI 聊天，超时或者服务器报错，给个友好提示------------
-                errMsg = "当前用户较多，排队中，请稍后再试！";
+            // 统一用翻译器兜底：null message、HTML、缺键JSON 都不再抛异常
+            String errMsg = LlmErrorMessageTranslator.translate(error);
+            if (LlmErrorMessageTranslator.TIMEOUT_MESSAGE.equals(errMsg)) {
+                // 超时：沿用原有的"普通消息+正常结束"交互
                 EventData eventData = new EventData(requestId, null, EventData.EVENT_MESSAGE, chatConversation.getId(), topicId);
                 eventData.setData(EventMessageData.builder().message("\n" + errMsg).build());
                 sendMessage2Client(emitter, eventData);
                 eventData = new EventData(requestId, null, EventData.EVENT_MESSAGE_END, chatConversation.getId(), topicId);
                 closeSSE(emitter, eventData);
-                //update-end---author:chenrui ---date:20250425  for：[QQYUN-12203]AI 聊天，超时或者服务器报错，给个友好提示------------
             } else {
-                errMsg = "调用大模型接口失败，详情请查看后台日志。";
-                boolean isFindErrorMsg = false;
-                // 根据常见异常关键字做细致翻译
-                for (Map.Entry<String, String> entry : AIChatHandler.MODEL_ERROR_MAP.entrySet()) {
-                    String key = entry.getKey();
-                    String value = entry.getValue();
-                    if (error.getMessage().contains(key)) {
-                        errMsg = value;
-                        isFindErrorMsg = true;
-                    }
-                }
-                String message = error.getMessage();
-                if(!isFindErrorMsg && message.contains("error")) {
-                    errMsg = JSONObject.parseObject(message).get("error").toString();
-                }
                 EventData eventData = new EventData(requestId, null, EventData.EVENT_FLOW_ERROR, chatConversation.getId(), topicId);
                 eventData.setData(EventFlowData.builder().success(false).message(errMsg).build());
                 closeSSE(emitter, eventData);
