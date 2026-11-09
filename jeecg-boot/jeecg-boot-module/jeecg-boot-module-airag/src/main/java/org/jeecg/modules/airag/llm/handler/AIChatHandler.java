@@ -70,6 +70,10 @@ public class AIChatHandler implements IAIChatHandler {
 
     @Autowired
     private AiChatConfig aiChatConfig;
+    /** AI调用超时下限（秒） */
+    private static final int LLM_TIMEOUT_MIN_SECONDS = 30;
+    /** AI调用超时上限（秒） */
+    private static final int LLM_TIMEOUT_MAX_SECONDS = 1800;
     
     /**
      * 问答
@@ -353,10 +357,19 @@ public class AIChatHandler implements IAIChatHandler {
             params.setMaxTokens(null);
         }
 
-        // 默认超时时间
-        if(oConvertUtils.isObjectEmpty(params.getTimeout())){
-            params.setTimeout(AiragConsts.DEFAULT_TIMEOUT);
+        // 超时统一单位：秒（AiModelFactory 用 Duration.ofSeconds 转换），默认300秒，范围[30,1800]
+        Integer timeout = params.getTimeout();
+        if (oConvertUtils.isObjectEmpty(timeout)) {
+            timeout = AiragConsts.DEFAULT_TIMEOUT;
+        } else if (timeout < LLM_TIMEOUT_MIN_SECONDS) {
+            log.warn("[AI-CHAT] mergeParams 超时配置过小,已修正为{}秒,原始值={}", LLM_TIMEOUT_MIN_SECONDS, timeout);
+            timeout = LLM_TIMEOUT_MIN_SECONDS;
+        } else if (timeout > LLM_TIMEOUT_MAX_SECONDS) {
+            log.warn("[AI-CHAT] mergeParams 超时配置过大,已修正为{}秒,原始值={}", LLM_TIMEOUT_MAX_SECONDS, timeout);
+            timeout = LLM_TIMEOUT_MAX_SECONDS;
         }
+        params.setTimeout(timeout);
+        log.info("[AI-CHAT] mergeParams 超时生效值={}秒", timeout);
 
         //deepseek-reasoner 推理模型不支持插件tool
         String modelName = airagModel.getModelName();

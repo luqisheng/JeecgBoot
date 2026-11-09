@@ -1629,7 +1629,7 @@ public class AiragChatServiceImpl implements IAiragChatService {
         final AIChatParams finalAiChatParams = aiChatParams;
         TokenStream chatStream;
         try {
-            aiChatParams.setTimeout(5*30*1000);
+            // 超时统一由 AIChatHandler.mergeParams 规范化（应用metadata > 模型参数 > 默认300秒）
             // 打印流程耗时日志
             printChatDuration(requestId, "开始向LLM发送消息");
             if (oConvertUtils.isNotEmpty(modelId)) {
