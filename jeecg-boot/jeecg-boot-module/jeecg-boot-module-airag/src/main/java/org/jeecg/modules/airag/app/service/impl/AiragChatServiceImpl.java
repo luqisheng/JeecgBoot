@@ -1201,11 +1201,20 @@ public class AiragChatServiceImpl implements IAiragChatService {
                 //图生图
                 imageList = aiChatHandler.imageEdit(drawModelId, sendParams.getContent(), images, aiChatParams);
             }
-            // 记录历史消息
-            String imageMarkdown = imageList.stream().map(map -> {
-                String newUrl = this.uploadImage(map);
-                return "![](" + newUrl + ")";
-            }).collect(Collectors.joining("\n"));
+            // 记录历史消息（过滤上传失败的图片，避免生成 ![]() 裂图）
+            String imageMarkdown = imageList.stream()
+                    .map(this::uploadImage)
+                    .filter(url -> oConvertUtils.isNotEmpty(url))
+                    .map(url -> "![](" + url + ")")
+                    .collect(Collectors.joining("\n"));
+            if (oConvertUtils.isEmpty(imageMarkdown)) {
+                // 全部上传失败:不追加空的AiMessage,直接给用户可操作的错误
+                EventData errorEventData = new EventData(requestId, null, EventData.EVENT_FLOW_ERROR, chatConversation.getId(), topicId);
+                errorEventData.setData(EventMessageData.builder().message("图片生成失败：图片上传失败，请检查存储配置。").build());
+                errorEventData.setRequestId(requestId);
+                closeSSE(emitter, errorEventData);
+                return emitter;
+            }
             //update-end---author:wangshuai---date:2026-01-26---for:【QQYUN-14615】应用门户加入新工具：取绘画id---
             AiMessage aiMessage = new AiMessage(imageMarkdown);
             appendMessage(messages, aiMessage, chatConversation, topicId);
@@ -2283,7 +2292,15 @@ public class AiragChatServiceImpl implements IAiragChatService {
             //图生图
             imageList = aiChatHandler.imageEdit(aiDrawGenerateVo.getDrawModelId(), aiDrawGenerateVo.getContent(), Arrays.asList(image.split(SymbolConstant.COMMA)), aiChatParams);
         }
-        return imageList.stream().map(this::uploadImage).collect(Collectors.joining("\n"));
+        String result = imageList.stream()
+                .map(this::uploadImage)
+                .filter(url -> oConvertUtils.isNotEmpty(url))
+                .collect(Collectors.joining("\n"));
+        if (oConvertUtils.isEmpty(result)) {
+            // 上传全部失败时抛出异常，让异步任务（genAiPosterAsync）落到failed，避免前端轮询到"假成功"
+            throw new JeecgBootBizTipException("图片生成失败：图片上传失败，请检查存储配置。");
+        }
+        return result;
     }
 
     //update-begin---author:wangshuai ---date:2026-04-15  for：【QQYUN-14568】AI海报生成改为异步，支持切换菜单后重新获取结果-----------
