@@ -108,7 +108,11 @@ public class AIChatHandler implements IAIChatHandler {
         AssertUtils.assertNotEmpty("请选择模型", modelId);
 
         AiragModel airagModel = airagModelMapper.getByIdIgnoreTenant(modelId);
-        //AssertUtils.assertSame("模型未激活,请先在[AI模型配置]中[测试激活]模型", airagModel.getActivateFlag(), 1);
+        // 与chat()对齐：模型不存在或未激活时回退默认模型
+        if (null == airagModel || airagModel.getActivateFlag() == null || airagModel.getActivateFlag() == 0) {
+            log.warn("模型未激活或不存在,采用默认模型: modelId={}", modelId);
+            return completionsByDefaultModel(messages, params);
+        }
         return completions(airagModel, messages, params);
     }
 
@@ -632,7 +636,7 @@ public class AIChatHandler implements IAIChatHandler {
      * @return
      */
     public List<Map<String, Object>> imageEdit(AiragModel airagModel,String messages, List<String> images, AIChatParams params) {
-        if(null == airagModel || airagModel.getActivateFlag() == 0){
+        if(null == airagModel || (airagModel.getActivateFlag() != null && airagModel.getActivateFlag() == 0)){
             if (airagModel != null && oConvertUtils.isNotEmpty(airagModel.getId())) {
                 log.warn("模型未激活,采用默认图生图模型");
             }
