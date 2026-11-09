@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "source_repository": "https://github.com/jeecgboot/skills",
+  "source_revision": "84a0fc77f4f3612385ec7013779aee6fa9a1faa5",
+  "skills": [
+    {
+      "name": "jeecg-aiflow",
+      "source": ".claude/skills/jeecg-aiflow/SKILL.md",
+      "sha256": "950f8e511df08a83e40af52e0dccfe3e323195e540f3308dc7a7501066fbf1ba"
+    },
+    {
+      "name": "jeecg-bpmn",
+      "source": ".claude/skills/jeecg-bpmn/SKILL.md",
+      "sha256": "7197a220f04a8224f1b6f25816c08d4580d2e48ec43c1b322b4bc2683f393cf5"
+    },
+    {
+      "name": "jeecg-codegen",
+      "source": ".claude/skills/jeecg-codegen/SKILL.md",
+      "sha256": "5f2d66d5991dbe2957ddebf6d28dd88d82c1334a0265c782f15fb8cb10a599e4"
+    },
+    {
+      "name": "jeecg-codegen-new",
+      "source": ".claude/skills/jeecg-codegen-new/SKILL.md",
+      "sha256": "673f5633bcacff2e883fed7b7afc523f4720cf96184d654d0811dda64bc32d13"
+    },
+    {
+      "name": "jeecg-desform",
+      "source": ".claude/skills/jeecg-desform/skill.md",
+      "sha256": "5a142b508edf8715b85afd72502734ae9176e43d7a4ac0576c57ce1df22afd62"
+    },
+    {
+      "name": "jeecg-dev",
+      "source": ".claude/skills/jeecg-dev/SKILL.md",
+      "sha256": "b422abb5e7b6d3b868374a6566c06014e3e3a2b58771f10c808eda4ec5032c8a"
+    },
+    {
+      "name": "jeecg-onlchart",
+      "source": ".claude/skills/jeecg-onlchart/SKILL.md",
+      "sha256": "67849e5a0b7c767bec4e05026d7d4a9625ed43c425dfabde89b6a3bcdb35b86c"
+    },
+    {
+      "name": "jeecg-onlform",
+      "source": ".claude/skills/jeecg-onlform/SKILL.md",
+      "sha256": "806fdeb468f2ee316346d7ea7a089170928cf386a85888ecd82dd186d71ac14c"
+    },
+    {
+      "name": "jeecg-onlreport",
+      "source": ".claude/skills/jeecg-onlreport/SKILL.md",
+      "sha256": "ec88c0a349fd15d3076b0950eb7846dd42617218311fecac6aff651abd4dcae1"
+    },
+    {
+      "name": "jeecg-portal",
+      "source": ".claude/skills/jeecg-portal/SKILL.md",
+      "sha256": "1c7a77104f4b81a024f6cea5a719b0f6a73261e1b1f2778243da85cd66acb0f2"
+    },
+    {
+      "name": "jeecg-system",
+      "source": ".claude/skills/jeecg-system/SKILL.md",
+      "sha256": "8a5335922d9787410fbeb4a40f1a1943f2b8e790c29548001fe3e50d7febcaad"
+    },
+    {
+      "name": "jeecg-uniapp-codegen",
+      "source": ".claude/skills/jeecg-codegen/uniapp/SKILL.md",
+      "sha256": "34e9192f0922d75986515637b65c7bc0e5dd43e50932718910adecad8a08dedc"
+    },
+    {
+      "name": "jimubi-bigscreen",
+      "source": ".claude/skills/jimubi-bigscreen/SKILL.md",
+      "sha256": "9c6b5ad3d065b0fbd6221ccd205b97f73c1fb2618423bdb43356c7e953696a4a"
+    },
+    {
+      "name": "jimubi-dashboard",
+      "source": ".claude/skills/jimubi-dashboard/skill.md",
+      "sha256": "092c8486a659b18e9235ef9cb244047117c16fa3e96b6e0a53d61025d878e11c"
+    },
+    {
+      "name": "jimureport",
+      "source": ".claude/skills/jimureport/SKILL.md",
+      "sha256": "845245735a5fa4f219558c6caf17a502de73e85c16d38d579906494ed6ce5769"
+    }
+  ],
+  "generated_files": {
+    ".agents/.gitattributes": "a79691a93b46e49ce460c26ef22afcc03d6eca1e63bf2edbc20e96159510f6c9",
+    ".agents/jeecg-adapter.md": "155b67c03204e4e9748f9560ae5ce845c45e9b0c7413fbc0570d763d8c8c39f4",
+    ".agents/skills/jeecg-aiflow/SKILL.md": "4008da2d13fd570f5ea46a5b1e10a08410a6a7eca01e51b9360f077260fa0d86",
+    ".agents/skills/jeecg-bpmn/SKILL.md": "8c75c85d98fdc4f19cc6260754386946fa8ed04d3f59a20e5860b3c35aab1f5e",
+    ".agents/skills/jeecg-codegen-new/SKILL.md": "1a42158529d32971fdfc3598df1019d7b8037ffe802c502009422f9a2dc1321b",
+    ".agents/skills/jeecg-codegen/SKILL.md": "bd9f6cead47bbbfac23f72b8138cc1b2ccb2efc685dadc5ac5f1002b4bde2334",
+    ".agents/skills/jeecg-desform/SKILL.md": "31ea153bcde662f00fc7266508e86a296efae072f77a0d48d24d190a099550ed",
+    ".agents/skills/jeecg-dev/SKILL.md": "6ced8885a224f07f04fa6f8ef7309084521ca52f43bb0abecd9e395375032464",
+    ".agents/skills/jeecg-dev/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+    ".agents/skills/jeecg-onlchart/SKILL.md": "92f82048ccfded57efd19a452d07b200064235e69561a02604a00d9847dc6f42",
+    ".agents/skills/jeecg-onlform/SKILL.md": "561a2fc7d09ab4e06aaa6a6f32f2557dc22e6d0ba3a1c59176656cf4845bbc05",
+    ".agents/skills/jeecg-onlreport/SKILL.md": "5c1a3cf31250d1d73a2ab4fff83f3d5f67b980d741342c6a7a92b986ceb93ed9",
+    ".agents/skills/jeecg-portal/SKILL.md": "22e6380ea519b0f1e4f47756e84cf40f1dfaff7aba9de09f589c71149770fc0a",
+    ".agents/skills/jeecg-system/SKILL.md": "f783753ba425e6193690828c115a6afe29a3c98697daaf2b89f77cc8040793fa",
+    ".agents/skills/jeecg-uniapp-codegen/SKILL.md": "02e671e1b3eb72257a58efc2ed21462caf4c2a7480d78565533531d8c22e5d08",
+    ".agents/skills/jimubi-bigscreen/SKILL.md": "599f552ac71a19fff2c49d80e013b9827437642b98d7832e8e5295b904d8aaea",
+    ".agents/skills/jimubi-dashboard/SKILL.md": "9af24a31c74667069f97d30ef8be061032e01d96804ab082e3ea5c19c60038ab",
+    ".agents/skills/jimureport/SKILL.md": "af4952482456465f013ff7c50e80c7c02a043a5b4d55dd5de678f733d0340274"
+  }
+}
