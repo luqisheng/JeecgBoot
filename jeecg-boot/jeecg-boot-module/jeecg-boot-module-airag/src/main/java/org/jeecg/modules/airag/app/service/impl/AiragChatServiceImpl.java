@@ -2395,7 +2395,10 @@ public class AiragChatServiceImpl implements IAiragChatService {
                 String bizPath = "chat";
                 String url = CommonUtils.uploadOnlineImage(data, path.getUpload(), bizPath, jeecgBaseConfig.getUploadType());
                 if("local".equals(jeecgBaseConfig.getUploadType())){
-                    url = "#{domainURL}/" + url;
+                    // 本地存储必须走 /sys/common/static/** 这个 Shiro 匿名放行的静态资源入口（与 EmbeddingHandler 保持一致）。
+                    // 原来拼成 #{domainURL}/chat/xxx.jpg 依赖的是按后缀全局放行（/**/*.jpg），该规则已在 issues/9840 中移除，
+                    // 直连路径会被 JwtFilter 拦截并记录"身份认证失败"。
+                    url = "#{domainURL}/sys/common/static/" + url;
                 }
                 return url;
             }

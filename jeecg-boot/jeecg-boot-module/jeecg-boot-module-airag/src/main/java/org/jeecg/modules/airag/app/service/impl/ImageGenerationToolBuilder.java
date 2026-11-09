@@ -45,7 +45,9 @@ public class ImageGenerationToolBuilder {
 	private static final int DEFAULT_IMAGE_COUNT = 1;
 	private static final int MAX_IMAGE_COUNT = 4;
 	private static final String IMAGE_TYPE_REGEX = "(?:图片|图像|配图|插图|海报|照片|插画)";
-	private static final String IMAGE_QUANTITY_REGEX = "(?:张(?:\\s*" + IMAGE_TYPE_REGEX + ")?|个\\s*" + IMAGE_TYPE_REGEX + ")";
+	// 量词同时接受"张"和"幅"："一幅/两幅"是中文里对绘画最常用的说法，不加的话"请生成一幅…哪吒形象"这类请求不会被识别为明确要图，
+	// 只能靠模型自行决定是否调用 generate_images 工具（小模型经常不调），加上后会走后端强制出图并合并进正文的路径。
+	private static final String IMAGE_QUANTITY_REGEX = "(?:[张幅](?:\\s*" + IMAGE_TYPE_REGEX + ")?|个\\s*" + IMAGE_TYPE_REGEX + ")";
 	private static final Pattern EXPLICIT_IMAGE_REQUEST_PATTERN = Pattern.compile(
 			"(?:生成|制作|创建|绘制|画|设计|添加|配).{0,20}" + IMAGE_TYPE_REGEX
 					+ "|(?:\\d+|[一二两三四])\\s*" + IMAGE_QUANTITY_REGEX

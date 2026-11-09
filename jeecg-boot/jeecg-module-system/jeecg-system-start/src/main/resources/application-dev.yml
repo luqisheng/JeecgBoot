@@ -158,7 +158,9 @@ spring:
       database: 0
       host: 127.0.0.1
       port: 6379
-      password: 123456
+      # 本机 6379 是 lqe-ai 项目的 ai-redis 容器（redis:7-alpine，无密码）。
+      # 留空即可；填了密码 shiro-redis(Jedis) 会发 AUTH 被拒：ERR AUTH <password> called without any password configured
+      password:
 #mybatis plus 设置
 mybatis-plus:
   mapper-locations: classpath*:org/jeecg/**/xml/*Mapper.xml
@@ -233,8 +235,10 @@ jeecg:
       apiKey: sk-??
       apiHost: https://open.bigmodel.cn/api/paas/v4
       timeout: 60
-      ffmpeg-path:
-      edge-tts-path:
+      # 本机通过 winget 安装（Gyan.FFmpeg），Links 目录下的软链接在升级后仍然有效
+      ffmpeg-path: C:/Users/admin/AppData/Local/Microsoft/WinGet/Links/ffmpeg.exe
+      # 本机通过 pip install --user 安装（C:\Python312\Scripts 对普通用户只读，装不进去）
+      edge-tts-path: C:/Users/admin/AppData/Roaming/Python/Python312/Scripts/edge-tts.exe
     # 默认向量模型
     ai-model-embed:
       provider: QWEN
@@ -247,11 +251,13 @@ jeecg:
     # AI流程敏感节点(stdio=命令行节点, sql=SQL节点, code=代码节点/脚本执行,高危存在RCE风险默认禁用)
     allow-sensitive-nodes: sql,stdio,code
     embed-store:
+      # 本机 5432 是 lqe-ai 项目的 ai-postgres 容器（pgvector/pgvector:pg14，POSTGRES_PASSWORD=123456）
+      # vector_db 是 2026-11-03 为 JeecgBoot 单独建的库，不与 lqe-ai 的 ai_lqe 混用
       host: 127.0.0.1
       port: 5432
       database: vector_db
       user: postgres
-      password: postgres
+      password: 123456
       table: embeddings
     # Brave Search 联网检索（AI Agent 工具）
     brave-search:
@@ -338,8 +344,8 @@ jeecg:
     ai:
       # OpenAI 兼容 base 地址（必填）
       base-url: https://api.deepseek.com
-      # API Key（必填，留空则 AI 不可用）
-      api-key: 
+      # API Key（必填，留空则 AI 不可用）。从环境变量 DEEPSEEK_API_KEY 读取，避免把密钥提交进 git
+      api-key: ${DEEPSEEK_API_KEY:}
       # 模型名
       model: deepseek-v4-pro
       #确定性输出，默认temperature=0

@@ -81,7 +81,9 @@ public class CommonUtils {
                 String savePath = file.getPath() + File.separator + fileName;
                 File savefile = new File(savePath);
                 FileCopyUtils.copy(data, savefile);
-                dbPath = bizPath + File.separator + fileName;
+                // dbPath 是给前端拼 URL 用的相对路径，必须用 "/"：Windows 下 File.separator 是 "\"，
+                // 会生成 chat\image.jpg 这种 URL，经 JSON 转义和浏览器规范化后变成 chat//image.jpg
+                dbPath = bizPath + "/" + fileName;
             }else {
                 InputStream in = new ByteArrayInputStream(data);
                 String relativePath = bizPath+"/"+fileName;
