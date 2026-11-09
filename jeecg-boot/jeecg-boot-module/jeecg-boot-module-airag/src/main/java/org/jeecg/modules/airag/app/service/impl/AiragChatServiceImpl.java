@@ -1647,14 +1647,15 @@ public class AiragChatServiceImpl implements IAiragChatService {
                 log.warn("[AI应用]接收LLM返回会话已关闭{}", requestId);
                 return;
             }
-            String errMsg = "调用大模型接口失败，详情请查看后台日志。";
-            if(e instanceof JeecgBootException || e instanceof JeecgBootBizTipException){
-                errMsg = e.getMessage();
-            }
+            // 业务提示类异常保留原始文案,其余交给翻译器兜底
+            String errMsg = (e instanceof JeecgBootException || e instanceof JeecgBootBizTipException)
+                    ? e.getMessage()
+                    : LlmErrorMessageTranslator.translate(e);
             EventData eventData = new EventData(requestId, null, EventData.EVENT_FLOW_ERROR, chatConversation.getId(), topicId);
             eventData.setData(EventFlowData.builder().success(false).message(errMsg).build());
             closeSSE(emitter, eventData);
-            throw new JeecgBootBizTipException("调用大模型接口失败:" + e.getMessage());
+            // 错误事件已发给客户端且流已关闭,不再向上抛出,交由doChat最外层兜底
+            return;
         }
 
         // 发送消息给前端
@@ -2574,7 +2575,15 @@ public class AiragChatServiceImpl implements IAiragChatService {
         eventRequestId.setData(EventMessageData.builder().message("").build());
         sendMessage2Client(emitter, eventRequestId);
         
-        sendWithFlow(requestId, AiAppConsts.ARTICLE_WRITER_FLOW_ID, chatConversation, topicId, new ArrayList<>(), sendParams);
+        try {
+            sendWithFlow(requestId, AiAppConsts.ARTICLE_WRITER_FLOW_ID, chatConversation, topicId, new ArrayList<>(), sendParams);
+        } catch (Throwable e) {
+            // runFlow同步抛异常时必须关闭SSE并清理缓存,不能让异常冒到Spring变成500 JSON
+            log.error("[ai-writer]流程执行失败,requestId:{}", requestId, e);
+            EventData errorEventData = new EventData(requestId, null, EventData.EVENT_FLOW_ERROR, conversationId, topicId);
+            errorEventData.setData(EventFlowData.builder().success(false).message(LlmErrorMessageTranslator.translate(e)).build());
+            closeSSE(emitter, errorEventData);
+        }
         return emitter;
     }
 
